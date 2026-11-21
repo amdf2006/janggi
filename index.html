@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>장기 — 將棋</title>
+<meta name="description" content="급수와 단수로 실력을 맞춰 두는 한국 장기. 컴퓨터 대국 18급부터 9단까지.">
+<meta name="theme-color" content="#141d27">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><polygon points='30,4 70,4 96,30 96,70 70,96 30,96 4,70 4,30' fill='%23e8d6ae' stroke='%23b0281f' stroke-width='6'/><text x='50' y='66' font-size='48' text-anchor='middle' fill='%23b0281f' font-family='serif' font-weight='700'>漢</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" crossorigin="anonymous" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;900&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="css/style.css">
+<script src="lib/stockfish.js"></script>
+</head>
+<body>
+
+<!-- 시작 화면 -->
+<main id="lobby" class="screen">
+  <section class="hero">
+    <h1 class="title"><span class="title-ko">장기</span><span class="title-han" aria-hidden="true">將棋</span></h1>
+    <p class="lede">컴퓨터와 18급부터 9단까지, 실제 급수에 맞춘 상대와 둡니다.</p>
+    <div class="hero-board" id="heroBoard" aria-hidden="true"></div>
+  </section>
+
+  <section class="setup" aria-labelledby="setupHead">
+    <div class="mode-tabs" role="tablist">
+      <button class="mode on" role="tab" aria-selected="true">컴퓨터와 두기</button>
+      <button class="mode" role="tab" aria-selected="false" disabled title="4단계에서 열립니다">온라인 대전 <small>준비 중</small></button>
+    </div>
+
+    <h2 id="setupHead" class="sr">대국 설정</h2>
+
+    <fieldset class="group">
+      <legend>상대 실력</legend>
+      <div class="level-now"><b id="levelName">10급</b><span id="levelDesc"></span></div>
+      <input type="range" id="levelRange" min="0" max="26" step="1" value="8" aria-label="상대 급수">
+      <div class="level-scale"><span>18급</span><span>1급</span><span>1단</span><span>9단</span></div>
+      <p class="record" id="levelRecord"></p>
+    </fieldset>
+
+    <fieldset class="group">
+      <legend>내 진영</legend>
+      <div class="seg" id="sidePick">
+        <label><input type="radio" name="side" value="cho" checked><span class="chip cho">초 · 선수</span></label>
+        <label><input type="radio" name="side" value="han"><span class="chip han">한 · 후수</span></label>
+        <label><input type="radio" name="side" value="random"><span class="chip">무작위</span></label>
+      </div>
+    </fieldset>
+
+    <fieldset class="group">
+      <legend>내 상차림</legend>
+      <div class="seg setups" id="setupPick"></div>
+    </fieldset>
+
+    <button class="start" id="startBtn" disabled>엔진 불러오는 중…</button>
+    <p class="note" id="engineNote"></p>
+  </section>
+</main>
+
+<!-- 대국 화면 -->
+<main id="play" class="screen" hidden>
+  <header class="bar">
+    <button class="ghost" id="backBtn" aria-label="처음 화면으로">← 나가기</button>
+    <div class="bar-title" id="matchTitle"></div>
+    <button class="ghost" id="soundBtn" aria-pressed="true" aria-label="소리 켜고 끄기">소리 켬</button>
+  </header>
+
+  <div class="table">
+    <aside class="player top" id="pTop"></aside>
+    <div class="board-wrap">
+      <div class="board" id="board">
+        <svg class="grid" id="grid" aria-hidden="true"></svg>
+        <div class="layer marks" id="marks"></div>
+        <div class="layer pieces" id="pieces"></div>
+        <div class="layer hit" id="hit"></div>
+      </div>
+      <div class="callout" id="callout" aria-live="assertive"></div>
+    </div>
+    <aside class="player bottom" id="pBottom"></aside>
+
+    <section class="side-panel">
+      <div class="actions">
+        <button id="passBtn">한수쉼</button>
+        <button id="undoBtn">무르기</button>
+        <button id="resignBtn" class="warn">기권</button>
+      </div>
+      <div class="status" id="status" aria-live="polite"></div>
+      <ol class="moves" id="moves" aria-label="기보"></ol>
+    </section>
+  </div>
+</main>
+
+<!-- 결과 -->
+<dialog id="result">
+  <h2 id="resTitle"></h2>
+  <p id="resReason"></p>
+  <p id="resScore" class="res-score"></p>
+  <div class="res-actions">
+    <button id="againBtn" class="start">같은 상대와 다시</button>
+    <button id="lobbyBtn" class="ghost">설정으로</button>
+  </div>
+</dialog>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

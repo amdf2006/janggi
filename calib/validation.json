@@ -1,0 +1,46 @@
+[
+ {
+  "strong": 0.1866,
+  "weak": 0.1606,
+  "games": 40,
+  "score": 0.675,
+  "elo_gap": 126.96816474086026,
+  "sec": 50,
+  "weak_name": "16급",
+  "strong_name": "15급",
+  "target": 0.6
+ },
+ {
+  "strong": 0.4578,
+  "weak": 0.4348,
+  "games": 40,
+  "score": 0.725,
+  "elo_gap": 168.40212509629237,
+  "sec": 45,
+  "weak_name": "7급",
+  "strong_name": "6급",
+  "target": 0.66
+ },
+ {
+  "strong": 0.6496,
+  "weak": 0.629,
+  "games": 30,
+  "score": 0.75,
+  "elo_gap": 190.848501887865,
+  "sec": 87,
+  "weak_name": "1단",
+  "strong_name": "2단",
+  "target": 0.69
+ },
+ {
+  "strong": 0.8579,
+  "weak": 0.8166,
+  "games": 12,
+  "score": 0.75,
+  "elo_gap": 190.848501887865,
+  "sec": 124,
+  "weak_name": "6단",
+  "strong_name": "7단",
+  "target": 0.7
+ }
+]
