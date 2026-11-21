@@ -331,11 +331,14 @@ async function boot() {
   $('#previewBtn').onclick = () => { $('#preview').showModal(); };
   $('#pvClose').onclick = () => $('#preview').close();
   const xiang = { type: 'k', side: 'cho' };
-  $('#pvBattle').onclick = () => battle($('#pvStage'), xiang, { type: 'r', side: 'han' }, { mode: 'full', sound: prefs.sound });
-  $('#pvBattle2').onclick = () => battle($('#pvStage'), { type: 'c', side: 'han' }, xiang, { mode: 'full', sound: prefs.sound });
+  const T = 'krcnbap'; const rnd = () => T[Math.floor(Math.random() * 7)];
+  let pvBusy = false;
+  const pv = async (a, d) => { if (pvBusy) return; pvBusy = true; await battle($('#pvStage'), a, d, { mode: 'full', sound: prefs.sound }); pvBusy = false; };
+  $('#pvBattle').onclick = () => { const s = Math.random() < 0.5 ? 'cho' : 'han'; pv({ type: rnd(), side: s }, { type: rnd(), side: s === 'cho' ? 'han' : 'cho' }); };
+  $('#pvBattle2').onclick = () => pv(xiang, { type: 'k', side: 'han' });
   $('#pvMove').onclick = () => {
-    const st = $('#pvStage'); const a = art('cho', 'k');
-    moveGhost(st, xiang, { left: '25%', top: '80%' }, { left: '75%', top: '80%' }, 700); sfx('move', prefs.sound);
+    const st = $('#pvStage'); const s = Math.random() < 0.5 ? 'cho' : 'han';
+    moveGhost(st, { type: rnd(), side: s }, { left: '25%', top: '80%' }, { left: '75%', top: '80%' }, 700); sfx('move', prefs.sound);
   };
   preload();
   await initRules();

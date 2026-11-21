@@ -41,7 +41,7 @@ export function moveGhost(layer, piece, from, to, dur = 280) {
   if (!a || reduce()) return;
   const g = document.createElement('img');
   g.className = 'mghost'; g.src = a.move; g.alt = '';
-  if (piece.side === 'han') g.classList.add('flip');
+  if (parseFloat(to.left) < parseFloat(from.left)) g.classList.add('flip');
   Object.assign(g.style, { left: from.left, top: from.top });
   layer.appendChild(g);
   g.animate([{ opacity: 0, transform: 'translate(-50%,-92%) scale(.85)' }, { opacity: 1, offset: 0.25, transform: 'translate(-50%,-92%) scale(1)' }, { opacity: 1, offset: 0.75 }, { opacity: 0, transform: 'translate(-50%,-92%) scale(1)' }], { duration: dur + 380, easing: 'ease-out' });
