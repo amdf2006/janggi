@@ -1,6 +1,8 @@
 import { initRules, Game, SETUPS, PIECES, parseMove, boardMap, makeFen, FILES } from './rules.js';
 import { Engine } from './engine.js';
 import { LEVELS } from './levels.js';
+import { art, preload } from './characters.js';
+import { battle, moveGhost, sfx } from './fx.js';
 
 const $ = (s) => document.querySelector(s);
 const store = {
@@ -8,30 +10,15 @@ const store = {
   load() { try { return JSON.parse(localStorage.getItem(this.key)) || {}; } catch { return {}; } },
   save(d) { try { localStorage.setItem(this.key, JSON.stringify(d)); } catch {} },
 };
-let prefs = Object.assign({ level: 8, side: 'cho', setup: 'NBBN', sound: true, record: {} }, store.load());
+let prefs = Object.assign({ level: 8, side: 'cho', setup: 'NBBN', sound: true, battle: 'full', record: {} }, store.load());
 
 const state = {
   game: null, engine: null, me: 'cho', level: null, selected: null,
-  busy: false, over: false, flipped: false, undoUsed: false, cpuSetup: null,
+  busy: false, anim: false, over: false, flipped: false, undoUsed: false, cpuSetup: null,
 };
 
-/* ── 소리 (나무 딱 소리 합성) ───────────────── */
-let actx = null;
-function clack(heavy = false) {
-  if (!prefs.sound) return;
-  try {
-    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
-    const t = actx.currentTime;
-    const len = heavy ? 0.16 : 0.07;
-    const buf = actx.createBuffer(1, actx.sampleRate * len, actx.sampleRate);
-    const d = buf.getChannelData(0);
-    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, heavy ? 3 : 6);
-    const src = actx.createBufferSource(); src.buffer = buf;
-    const bp = actx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = heavy ? 380 : 1500; bp.Q.value = heavy ? 2 : 4;
-    const g = actx.createGain(); g.gain.value = heavy ? 1.1 : 0.7;
-    src.connect(bp).connect(g).connect(actx.destination); src.start(t);
-  } catch {}
-}
+/* ── 소리 ── */
+function clack(heavy = false) { sfx(heavy ? 'thud' : 'move', prefs.sound); }
 
 /* ── 판 그리기 ─────────────────────────────── */
 const GX = 9.2, GY = 10.2, M = 0.6;
@@ -74,7 +61,9 @@ function pieceEl(p) {
   const el = document.createElement('div');
   const info = PIECES[p.type];
   el.className = `pc ${p.side} ${info.size}`;
-  el.innerHTML = `<span>${info[p.side]}</span>`;
+  const a = art(p.side, p.type);
+  if (a) { el.classList.add('has-art'); el.innerHTML = `<img class="por" src="${a.portrait}" alt=""><b class="hj">${info[p.side]}</b>`; }
+  else el.innerHTML = `<span>${info[p.side]}</span>`;
   el.setAttribute('aria-hidden', 'true');
   return el;
 }
@@ -121,7 +110,7 @@ function renderAll() {
   renderMarks();
 }
 
-function animateMove(uci, captured) {
+function animateMove(uci, captured, piece) {
   const mv = parseMove(uci);
   if (mv.pass) return;
   const el = pieceEls[mv.from];
@@ -131,6 +120,9 @@ function animateMove(uci, captured) {
   }
   if (el) {
     el.classList.add('moving');
+    const fromP = (() => { const c = sqToCR(mv.from, state.flipped); return pos(c.col, c.row); })();
+    const toP = (() => { const c = sqToCR(mv.to, state.flipped); return pos(c.col, c.row); })();
+    if (piece) moveGhost($('#pieces'), piece, fromP, toP);
     const { col, row } = sqToCR(mv.to, state.flipped);
     Object.assign(el.style, pos(col, row));
     setTimeout(() => el.classList.remove('moving'), 300);
@@ -188,10 +180,10 @@ function renderMoves() {
 }
 
 function renderControls() {
-  const g = state.game; const myTurn = !state.over && !state.busy && g.turn() === state.me;
+  const g = state.game; const myTurn = !state.over && !state.busy && !state.anim && g.turn() === state.me;
   const canPass = myTurn && g.legal().some((m) => parseMove(m).pass);
   $('#passBtn').disabled = !canPass;
-  $('#undoBtn').disabled = state.busy || state.over || g.moves.filter((m) => m.mover === state.me).length === 0;
+  $('#undoBtn').disabled = state.busy || state.anim || state.over || g.moves.filter((m) => m.mover === state.me).length === 0;
   $('#resignBtn').disabled = state.over;
   let s = '';
   if (state.over) s = '대국이 끝났습니다.';
@@ -204,14 +196,23 @@ function renderControls() {
 function refresh() { renderMarks(); renderPlayers(); renderMoves(); renderControls(); }
 
 /* ── 진행 ───────────────────────────────── */
-function doMove(uci) {
+async function doMove(uci) {
   const g = state.game;
   const wasCheck = g.isCheck();
   const mv = parseMove(uci);
-  const cap = !mv.pass && !!g.map()[mv.to];
-  g.push(uci);
+  const before = g.map();
+  const piece = before[mv.from];
+  const victim = !mv.pass ? before[mv.to] : null;
+  const cap = !!victim;
   state.selected = null;
-  animateMove(uci, cap);
+  if (cap && prefs.battle !== 'off') {
+    state.anim = true; renderMarks(); renderControls();
+    await battle($('.board-wrap'), piece, victim, { mode: prefs.battle, sound: prefs.sound });
+    state.anim = false;
+    if (state.game !== g) return;
+  }
+  g.push(uci);
+  animateMove(uci, cap, piece);
   clack(cap);
   if (mv.pass) callout('한수쉼', g.moves[g.moves.length - 1].mover);
   else if (g.isCheck()) setTimeout(() => callout('장군', g.moves[g.moves.length - 1].mover), 180);
@@ -239,7 +240,7 @@ async function cpuMove() {
 
 function onSquare(sq) {
   const g = state.game;
-  if (!g || state.over || state.busy || g.turn() !== state.me) return;
+  if (!g || state.over || state.busy || state.anim || g.turn() !== state.me) return;
   const map = g.map();
   if (state.selected) {
     const m = g.legal().find((u) => { const p = parseMove(u); return p.from === state.selected && p.to === sq && !p.pass; });
@@ -323,6 +324,20 @@ async function boot() {
   $('#soundBtn').setAttribute('aria-pressed', prefs.sound);
   $('#soundBtn').onclick = () => { prefs.sound = !prefs.sound; store.save(prefs); $('#soundBtn').textContent = prefs.sound ? '소리 켬' : '소리 끔'; $('#soundBtn').setAttribute('aria-pressed', prefs.sound); };
 
+  const BM = { full: '전투 연출: 전체', short: '전투 연출: 짧게', off: '전투 연출: 끔' };
+  const setBM = () => { $('#battleBtn').textContent = BM[prefs.battle]; };
+  setBM();
+  $('#battleBtn').onclick = () => { prefs.battle = { full: 'short', short: 'off', off: 'full' }[prefs.battle]; store.save(prefs); setBM(); };
+  $('#previewBtn').onclick = () => { $('#preview').showModal(); };
+  $('#pvClose').onclick = () => $('#preview').close();
+  const xiang = { type: 'k', side: 'cho' };
+  $('#pvBattle').onclick = () => battle($('#pvStage'), xiang, { type: 'r', side: 'han' }, { mode: 'full', sound: prefs.sound });
+  $('#pvBattle2').onclick = () => battle($('#pvStage'), { type: 'c', side: 'han' }, xiang, { mode: 'full', sound: prefs.sound });
+  $('#pvMove').onclick = () => {
+    const st = $('#pvStage'); const a = art('cho', 'k');
+    moveGhost(st, xiang, { left: '25%', top: '80%' }, { left: '75%', top: '80%' }, 700); sfx('move', prefs.sound);
+  };
+  preload();
   await initRules();
   buildSetupPicker(); drawHero(); buildPlayBoard();
 

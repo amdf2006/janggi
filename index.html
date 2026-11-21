@@ -55,6 +55,7 @@
 
     <button class="start" id="startBtn" disabled>엔진 불러오는 중…</button>
     <p class="note" id="engineNote"></p>
+    <button class="linkish" id="previewBtn">캐릭터 연출 미리보기</button>
   </section>
 </main>
 
@@ -63,7 +64,7 @@
   <header class="bar">
     <button class="ghost" id="backBtn" aria-label="처음 화면으로">← 나가기</button>
     <div class="bar-title" id="matchTitle"></div>
-    <button class="ghost" id="soundBtn" aria-pressed="true" aria-label="소리 켜고 끄기">소리 켬</button>
+    <div class="bar-right"><button class="ghost" id="battleBtn">전투 연출: 전체</button><button class="ghost" id="soundBtn" aria-pressed="true" aria-label="소리 켜고 끄기">소리 켬</button></div>
   </header>
 
   <div class="table">
@@ -100,6 +101,19 @@
     <button id="againBtn" class="start">같은 상대와 다시</button>
     <button id="lobbyBtn" class="ghost">설정으로</button>
   </div>
+</dialog>
+
+<!-- 연출 미리보기 -->
+<dialog id="preview" class="pv">
+  <h2>연출 미리보기</h2>
+  <p>지금은 초나라 궁(항우)만 캐릭터가 있습니다. 나머지는 기존 말로 나옵니다.</p>
+  <div class="pv-stage board-wrap" id="pvStage"></div>
+  <div class="pv-actions">
+    <button id="pvMove">이동</button>
+    <button id="pvBattle">항우가 공격</button>
+    <button id="pvBattle2">항우가 피격</button>
+  </div>
+  <button class="ghost" id="pvClose">닫기</button>
 </dialog>
 
 <script type="module" src="js/app.js"></script>

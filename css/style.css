@@ -239,3 +239,56 @@ dialog p { margin: 4px 0; color: var(--muted); }
   .pc { transition: none; }
   .callout.show, .pc.checked { animation-duration: .01s; }
 }
+
+/* ── 캐릭터 말 ───────────────────────────── */
+.pc.has-art .por {
+  position: absolute; inset: 9%; width: 82%; height: 82%; object-fit: cover; z-index: 1;
+  clip-path: polygon(29% 0,71% 0,100% 29%,100% 71%,71% 100%,29% 100%,0 71%,0 29%);
+  background: radial-gradient(circle at 50% 35%, #f4e6c8, #cdb07a);
+}
+.pc.has-art .hj {
+  position: absolute; z-index: 2; right: -6%; bottom: -6%;
+  width: 40%; aspect-ratio: 1; display: grid; place-items: center;
+  font: 900 calc(var(--n) * .2cqw)/1 var(--serif); color: #fff; background: currentColor;
+  clip-path: polygon(29% 0,71% 0,100% 29%,100% 71%,71% 100%,29% 100%,0 71%,0 29%);
+}
+.pc.cho.has-art .hj { background: var(--cho); color: #fff; }
+.pc.han.has-art .hj { background: var(--han); color: #fff; }
+
+.mghost {
+  position: absolute; height: 26%; width: auto; pointer-events: none; z-index: 6;
+  transform: translate(-50%, -92%); filter: drop-shadow(0 8px 10px rgba(0,0,0,.45));
+}
+.mghost.flip { scale: -1 1; }
+
+/* ── 전투 컷신 ───────────────────────────── */
+.battle { position: absolute; inset: 0; z-index: 20; overflow: hidden; border-radius: 3px; pointer-events: none; }
+.b-bg { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 60%, rgba(60,30,10,.55), rgba(8,10,14,.92) 70%); }
+.b-flash { position: absolute; inset: 0; background: #fff7e0; opacity: 0; mix-blend-mode: screen; }
+.b-slash {
+  position: absolute; left: 52%; top: 46%; width: 85%; height: 3.5%; opacity: 0;
+  background: linear-gradient(90deg, transparent, #fff 35%, #ffe2a8 60%, transparent);
+  box-shadow: 0 0 30px 8px rgba(255,210,140,.7); border-radius: 50%;
+}
+.fighter { position: absolute; bottom: 6%; height: 78%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
+.fighter img { height: 100%; width: auto; filter: drop-shadow(0 14px 18px rgba(0,0,0,.6)); }
+.fighter.left { left: 2%; }
+.fighter.right { right: 2%; }
+.fighter.left.han img, .fighter.right.cho img { scale: -1 1; }
+.fighter .tag { position: absolute; bottom: -2%; font: 900 clamp(14px, 2.6vw, 22px)/1 var(--serif); color: var(--paper); text-shadow: 0 2px 6px #000; }
+.fighter.token { height: 40%; bottom: 28%; width: 34%; }
+.fighter.token .tag { bottom: -18%; }
+.fighter.token .pc.big { position: relative; left: auto; top: auto; transform: none; width: 100%; --n: 30; }
+.fighter.token .pc.big span { font-size: clamp(40px, 10vw, 84px); }
+.fighter.token.cracked .pc.big::after { opacity: 1; border-color: #3b2412; }
+
+.bar-right { display: flex; gap: 8px; }
+.linkish { background: none; border: 0; color: var(--muted); text-decoration: underline; margin-top: 12px; padding: 4px 0; font-size: 14px; }
+.linkish:hover { color: var(--paper); }
+dialog.pv { width: min(94vw, 560px); }
+.pv-stage { position: relative; aspect-ratio: 4 / 3; margin: 12px 0; border-radius: 4px;
+  background: linear-gradient(160deg, #e3c48e, var(--wood) 45%, var(--wood-dark)); overflow: hidden; }
+.pv-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
+.pv-actions button { padding: 10px 6px; background: var(--night); border: 1px solid var(--night-3); border-radius: 4px; }
+@media (max-width: 900px) { .bar-right .ghost { padding: 6px 8px; font-size: 13px; } }
+.pv-stage .mghost { height: 70%; }
