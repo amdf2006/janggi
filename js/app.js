@@ -63,8 +63,9 @@ function renderAll() {
 }
 
 function renderMarks() {
-  const marks = view.marks; marks.innerHTML = '';
-  const add = (sq, cls) => { const d = document.createElement('div'); d.className = 'mk ' + cls; const { col, row } = sqToCR(sq, state.flipped); place(d, col, row); d.style.zIndex = ''; marks.appendChild(d); };
+  view.marks.innerHTML = ''; view.marks2.innerHTML = '';
+  view.root.classList.toggle('picking', !!state.selected);
+  const add = (sq, cls) => { const d = document.createElement('div'); d.className = 'mk ' + cls; const { col, row } = sqToCR(sq, state.flipped); place(d, col, row); d.style.zIndex = ''; (cls.startsWith('last') ? view.marks : view.marks2).appendChild(d); };
   const g = state.game;
   const last = g.moves[g.moves.length - 1];
   if (last) { const mv = parseMove(last.uci); if (!mv.pass) { add(mv.from, 'last from'); add(mv.to, 'last'); } }

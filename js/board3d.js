@@ -65,10 +65,10 @@ export function buildBoard(container) {
     <polygon points="${P(-e, 0)} ${P(e, 0)} ${P(e, DEPTH)} ${P(-e, DEPTH)}" fill="none" stroke="#7a5224" stroke-width=".06"/>
     <g stroke="#4b3118" stroke-linecap="round">${lines}</g>
   </svg>
-  <div class="layer marks"></div><div class="layer hit"></div><div class="layer units"></div><div class="layer fxl"></div>`;
+  <div class="layer marks"></div><div class="layer units"></div><div class="layer fxl"></div><div class="layer marks2"></div><div class="layer hit"></div>`;
   container.insertAdjacentHTML('beforeend', svg);
   return {
-    marks: container.querySelector('.marks'), hit: container.querySelector('.hit'),
+    marks: container.querySelector('.marks'), marks2: container.querySelector('.marks2'), hit: container.querySelector('.hit'),
     units: container.querySelector('.units'), fx: container.querySelector('.fxl'), root: container,
   };
 }

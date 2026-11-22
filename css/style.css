@@ -347,3 +347,17 @@ dialog.pv { width: min(94vw, 560px); }
 
 .hero-board .stage { transform: none; }
 .hero-board { max-width: 560px; }
+
+/* 클릭은 항상 판 위 교차점으로 — 캐릭터 그림이 칸을 가리지 않게 */
+.stage .units { z-index: 1; }
+.stage .fxl { z-index: 2; }
+.stage .marks2 { z-index: 3; pointer-events: none; }
+.stage .hit { z-index: 4; }
+.unit .fig, .unit .disc { pointer-events: none !important; }
+.stage .hit button { width: calc(var(--u) * 1.0); height: calc(var(--u) * .8); cursor: pointer; }
+.stage .hit button:hover { background: radial-gradient(ellipse, rgba(255,240,200,.35), transparent 70%); }
+/* 말을 고르면 나머지 캐릭터는 반투명 → 갈 자리가 보임 */
+.unit .fig { transition: opacity .15s; }
+.stage.picking .unit:not(.selected):not(.target) .fig { opacity: .28; }
+.stage.picking .unit.target .fig { opacity: .75; }
+.stage .marks2 .mk.dot { box-shadow: 0 0 0 calc(var(--u) * .05) rgba(255,255,255,.7), 0 0 calc(var(--u) * .2) rgba(0,0,0,.5); }
