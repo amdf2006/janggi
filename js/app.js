@@ -2,7 +2,8 @@ import { initRules, Game, SETUPS, PIECES, parseMove, boardMap, makeFen, FILES } 
 import { Engine } from './engine.js';
 import { LEVELS } from './levels.js';
 import { art, preload } from './characters.js';
-import { battle, moveGhost, sfx } from './fx.js';
+import { sfx } from './fx.js';
+import { buildBoard, makeUnit, place, animateMove as walkMove, animateCapture } from './board3d.js';
 
 const $ = (s) => document.querySelector(s);
 const store = {
@@ -20,26 +21,7 @@ const state = {
 /* ── 소리 ── */
 function clack(heavy = false) { sfx(heavy ? 'thud' : 'move', prefs.sound); }
 
-/* ── 판 그리기 ─────────────────────────────── */
-const GX = 9.2, GY = 10.2, M = 0.6;
-const pos = (col, row) => ({ left: ((M + col) / GX) * 100 + '%', top: ((M + row) / GY) * 100 + '%' });
-
-function gridSVG(svg) {
-  const u = 100, m = 60, W = 920, H = 1020;
-  let s = '';
-  const L = (x1, y1, x2, y2, w = 2) => (s += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke-width="${w}"/>`);
-  for (let r = 0; r < 10; r++) L(m, m + r * u, m + 8 * u, m + r * u);
-  for (let f = 0; f < 9; f++) L(m + f * u, m, m + f * u, m + 9 * u);
-  // 궁성 대각선
-  for (const top of [0, 7]) {
-    L(m + 3 * u, m + top * u, m + 5 * u, m + (top + 2) * u);
-    L(m + 5 * u, m + top * u, m + 3 * u, m + (top + 2) * u);
-  }
-  s = `<rect x="${m}" y="${m}" width="${8 * u}" height="${9 * u}" fill="none" stroke-width="4"/>` + s;
-  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-  svg.innerHTML = `<g stroke="#4b3118" stroke-linecap="square">${s}</g>`;
-}
-
+/* ── 판 (원근) ──────────────────────────────── */
 function sqToCR(sq, flipped) {
   const f = FILES.indexOf(sq[0]); const r = +sq.slice(1) - 1;
   return flipped ? { col: 8 - f, row: r } : { col: f, row: 9 - r };
@@ -48,107 +30,60 @@ function crToSq(col, row, flipped) {
   return flipped ? FILES[8 - col] + (row + 1) : FILES[col] + (10 - row);
 }
 
-function makeBoard(container) {
-  container.innerHTML = '';
-  const b = document.createElement('div'); b.className = 'board';
-  b.innerHTML = '<svg class="grid"></svg><div class="layer marks"></div><div class="layer pieces"></div><div class="layer hit"></div>';
-  container.appendChild(b);
-  gridSVG(b.querySelector('.grid'));
-  return b;
-}
-
-function pieceEl(p) {
-  const el = document.createElement('div');
-  const info = PIECES[p.type];
-  el.className = `pc ${p.side} ${info.size}`;
-  const a = art(p.side, p.type);
-  if (a) { el.classList.add('has-art'); el.innerHTML = `<img class="por" src="${a.portrait}" alt=""><b class="hj">${info[p.side]}</b>`; }
-  else el.innerHTML = `<span>${info[p.side]}</span>`;
-  el.setAttribute('aria-hidden', 'true');
-  return el;
-}
-
-function drawStatic(boardEl, fen, flipped) {
-  const layer = boardEl.querySelector('.pieces'); layer.innerHTML = '';
-  const map = boardMap(fen);
-  for (const sq in map) {
-    const el = pieceEl(map[sq]); const { col, row } = sqToCR(sq, flipped);
-    Object.assign(el.style, pos(col, row)); layer.appendChild(el);
-  }
-}
-
-/* ── 대국판 ─────────────────────────────── */
-let boardEl, pieceEls = {};
+let view = null, unitEls = {};
 
 function buildPlayBoard() {
-  boardEl = $('#board');
-  gridSVG($('#grid'));
-  const hit = $('#hit'); hit.innerHTML = '';
+  view = buildBoard($('#board'));
   for (let row = 0; row < 10; row++) for (let col = 0; col < 9; col++) {
     const btn = document.createElement('button');
-    Object.assign(btn.style, pos(col, row));
+    place(btn, col, row); btn.style.zIndex = '';
     btn.dataset.col = col; btn.dataset.row = row;
     btn.addEventListener('click', () => onSquare(crToSq(col, row, state.flipped)));
-    hit.appendChild(btn);
+    view.hit.appendChild(btn);
   }
   relabelHits();
 }
 function relabelHits() {
-  $('#hit').querySelectorAll('button').forEach((b) => {
-    const sq = crToSq(+b.dataset.col, +b.dataset.row, state.flipped);
-    b.setAttribute('aria-label', sq);
-  });
+  view.hit.querySelectorAll('button').forEach((b) => b.setAttribute('aria-label', crToSq(+b.dataset.col, +b.dataset.row, state.flipped)));
+}
+
+function addUnit(layer, p, sq, flipped, clickable) {
+  const el = makeUnit(p); const { col, row } = sqToCR(sq, flipped);
+  place(el, col, row); layer.appendChild(el);
+  if (clickable) el.addEventListener('click', () => onSquare(el._sq));
+  el._sq = sq;
+  return el;
 }
 
 function renderAll() {
-  const layer = $('#pieces'); layer.innerHTML = ''; pieceEls = {};
+  view.units.innerHTML = ''; unitEls = {};
   const map = state.game.map();
-  for (const sq in map) {
-    const el = pieceEl(map[sq]); const { col, row } = sqToCR(sq, state.flipped);
-    Object.assign(el.style, pos(col, row)); layer.appendChild(el); pieceEls[sq] = el;
-  }
+  for (const sq in map) unitEls[sq] = addUnit(view.units, map[sq], sq, state.flipped, true);
   renderMarks();
 }
 
-function animateMove(uci, captured, piece) {
-  const mv = parseMove(uci);
-  if (mv.pass) return;
-  const el = pieceEls[mv.from];
-  if (captured && pieceEls[mv.to]) {
-    const v = pieceEls[mv.to];
-    setTimeout(() => { v.classList.add('gone'); setTimeout(() => v.remove(), 260); }, 200);
-  }
-  if (el) {
-    el.classList.add('moving');
-    const fromP = (() => { const c = sqToCR(mv.from, state.flipped); return pos(c.col, c.row); })();
-    const toP = (() => { const c = sqToCR(mv.to, state.flipped); return pos(c.col, c.row); })();
-    if (piece) moveGhost($('#pieces'), piece, fromP, toP);
-    const { col, row } = sqToCR(mv.to, state.flipped);
-    Object.assign(el.style, pos(col, row));
-    setTimeout(() => el.classList.remove('moving'), 300);
-    delete pieceEls[mv.from]; pieceEls[mv.to] = el;
-  }
-}
-
 function renderMarks() {
-  const marks = $('#marks'); marks.innerHTML = '';
-  const add = (sq, cls) => { const d = document.createElement('div'); d.className = 'mk ' + cls; const { col, row } = sqToCR(sq, state.flipped); Object.assign(d.style, pos(col, row)); marks.appendChild(d); };
+  const marks = view.marks; marks.innerHTML = '';
+  const add = (sq, cls) => { const d = document.createElement('div'); d.className = 'mk ' + cls; const { col, row } = sqToCR(sq, state.flipped); place(d, col, row); d.style.zIndex = ''; marks.appendChild(d); };
   const g = state.game;
   const last = g.moves[g.moves.length - 1];
   if (last) { const mv = parseMove(last.uci); if (!mv.pass) { add(mv.from, 'last from'); add(mv.to, 'last'); } }
+  Object.values(unitEls).forEach((e) => e.classList.remove('selected', 'checked', 'target'));
   if (state.selected) {
     add(state.selected, 'sel');
+    if (unitEls[state.selected]) unitEls[state.selected].classList.add('selected');
     const map = g.map();
     for (const m of g.legal()) {
       const mv = parseMove(m);
-      if (mv.from === state.selected && !mv.pass) add(mv.to, map[mv.to] ? 'dot cap' : 'dot');
+      if (mv.from === state.selected && !mv.pass) {
+        add(mv.to, map[mv.to] ? 'dot cap' : 'dot');
+        if (map[mv.to] && unitEls[mv.to]) unitEls[mv.to].classList.add('target');
+      }
     }
   }
-  // 장군 표시
-  Object.values(pieceEls).forEach((e) => e.classList.remove('checked'));
   if (g.isCheck()) {
     const map = g.map(); const t = g.turn();
-    for (const sq in map) if (map[sq].type === 'k' && map[sq].side === t && pieceEls[sq]) pieceEls[sq].classList.add('checked');
+    for (const sq in map) if (map[sq].type === 'k' && map[sq].side === t && unitEls[sq]) unitEls[sq].classList.add('checked');
   }
 }
 
@@ -201,26 +136,29 @@ async function doMove(uci) {
   const wasCheck = g.isCheck();
   const mv = parseMove(uci);
   const before = g.map();
-  const piece = before[mv.from];
   const victim = !mv.pass ? before[mv.to] : null;
-  const cap = !!victim;
   state.selected = null;
-  if (cap && prefs.battle !== 'off') {
+  if (!mv.pass) {
     state.anim = true; renderMarks(); renderControls();
-    await battle($('.board-wrap'), piece, victim, { mode: prefs.battle, sound: prefs.sound });
+    const el = unitEls[mv.from];
+    const from = sqToCR(mv.from, state.flipped), to = sqToCR(mv.to, state.flipped);
+    const opts = { mode: prefs.battle, sound: prefs.sound };
+    if (el) {
+      if (victim && unitEls[mv.to]) await animateCapture(view, el, unitEls[mv.to], from, to, opts);
+      else await walkMove(view, el, from, to, opts);
+      delete unitEls[mv.from]; unitEls[mv.to] = el; el._sq = mv.to;
+    }
     state.anim = false;
     if (state.game !== g) return;
   }
   g.push(uci);
-  animateMove(uci, cap, piece);
-  clack(cap);
-  if (mv.pass) callout('한수쉼', g.moves[g.moves.length - 1].mover);
-  else if (g.isCheck()) setTimeout(() => callout('장군', g.moves[g.moves.length - 1].mover), 180);
-  else if (wasCheck) setTimeout(() => callout('멍군', g.moves[g.moves.length - 1].mover), 180);
+  if (mv.pass) { clack(); callout('한수쉼', g.moves[g.moves.length - 1].mover); }
+  else if (g.isCheck()) callout('장군', g.moves[g.moves.length - 1].mover);
+  else if (wasCheck) callout('멍군', g.moves[g.moves.length - 1].mover);
   refresh();
   const out = g.outcome();
   if (out) return setTimeout(() => finish(out), 700);
-  if (g.turn() !== state.me) setTimeout(cpuMove, 350);
+  if (g.turn() !== state.me) setTimeout(cpuMove, 300);
 }
 
 async function cpuMove() {
@@ -310,8 +248,9 @@ function buildSetupPicker() {
 }
 
 function drawHero() {
-  const b = makeBoard($('#heroBoard'));
-  drawStatic(b, makeFen(prefs.setup, 'NBBN'), false);
+  const v = buildBoard($('#heroBoard'));
+  const map = boardMap(makeFen(prefs.setup, 'NBBN'));
+  for (const sq in map) addUnit(v.units, map[sq], sq, false, false);
 }
 
 async function boot() {
@@ -328,18 +267,6 @@ async function boot() {
   const setBM = () => { $('#battleBtn').textContent = BM[prefs.battle]; };
   setBM();
   $('#battleBtn').onclick = () => { prefs.battle = { full: 'short', short: 'off', off: 'full' }[prefs.battle]; store.save(prefs); setBM(); };
-  $('#previewBtn').onclick = () => { $('#preview').showModal(); };
-  $('#pvClose').onclick = () => $('#preview').close();
-  const xiang = { type: 'k', side: 'cho' };
-  const T = 'krcnbap'; const rnd = () => T[Math.floor(Math.random() * 7)];
-  let pvBusy = false;
-  const pv = async (a, d) => { if (pvBusy) return; pvBusy = true; await battle($('#pvStage'), a, d, { mode: 'full', sound: prefs.sound }); pvBusy = false; };
-  $('#pvBattle').onclick = () => { const s = Math.random() < 0.5 ? 'cho' : 'han'; pv({ type: rnd(), side: s }, { type: rnd(), side: s === 'cho' ? 'han' : 'cho' }); };
-  $('#pvBattle2').onclick = () => pv(xiang, { type: 'k', side: 'han' });
-  $('#pvMove').onclick = () => {
-    const st = $('#pvStage'); const s = Math.random() < 0.5 ? 'cho' : 'han';
-    moveGhost(st, { type: rnd(), side: s }, { left: '25%', top: '80%' }, { left: '75%', top: '80%' }, 700); sfx('move', prefs.sound);
-  };
   preload();
   await initRules();
   buildSetupPicker(); drawHero(); buildPlayBoard();

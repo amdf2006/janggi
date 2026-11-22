@@ -55,7 +55,6 @@
 
     <button class="start" id="startBtn" disabled>엔진 불러오는 중…</button>
     <p class="note" id="engineNote"></p>
-    <button class="linkish" id="previewBtn">캐릭터 연출 미리보기</button>
   </section>
 </main>
 
@@ -70,12 +69,7 @@
   <div class="table">
     <aside class="player top" id="pTop"></aside>
     <div class="board-wrap">
-      <div class="board" id="board">
-        <svg class="grid" id="grid" aria-hidden="true"></svg>
-        <div class="layer marks" id="marks"></div>
-        <div class="layer pieces" id="pieces"></div>
-        <div class="layer hit" id="hit"></div>
-      </div>
+      <div id="board"></div>
       <div class="callout" id="callout" aria-live="assertive"></div>
     </div>
     <aside class="player bottom" id="pBottom"></aside>
@@ -101,19 +95,6 @@
     <button id="againBtn" class="start">같은 상대와 다시</button>
     <button id="lobbyBtn" class="ghost">설정으로</button>
   </div>
-</dialog>
-
-<!-- 연출 미리보기 -->
-<dialog id="preview" class="pv">
-  <h2>연출 미리보기</h2>
-  <p>초한지 테마 14명의 이동·전투 연출을 미리 볼 수 있습니다.</p>
-  <div class="pv-stage board-wrap" id="pvStage"></div>
-  <div class="pv-actions">
-    <button id="pvMove">이동</button>
-    <button id="pvBattle">무작위 전투</button>
-    <button id="pvBattle2">항우 대 유방</button>
-  </div>
-  <button class="ghost" id="pvClose">닫기</button>
 </dialog>
 
 <script type="module" src="js/app.js"></script>
