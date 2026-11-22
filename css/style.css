@@ -361,3 +361,15 @@ dialog.pv { width: min(94vw, 560px); }
 .stage.picking .unit:not(.selected):not(.target) .fig { opacity: .28; }
 .stage.picking .unit.target .fig { opacity: .75; }
 .stage .marks2 .mk.dot { box-shadow: 0 0 0 calc(var(--u) * .05) rgba(255,255,255,.7), 0 0 calc(var(--u) * .2) rgba(0,0,0,.5); }
+
+/* ── 평소엔 작게, 움직일 때 크게 ── */
+@property --fs { syntax: '<number>'; inherits: true; initial-value: .5; }
+.unit { --fs: .5; transition: --fs .22s ease-out; }
+.unit.selected { --fs: .68; }
+.unit.active { --fs: 1; }
+.unit .fig { height: calc(var(--u) * 2.05 * var(--fs)) !important; }
+.unit.sz-s .fig { height: calc(var(--u) * 1.8 * var(--fs)) !important; }
+.unit img.fig { max-width: calc(var(--u) * 1.4 * var(--fs)) !important; }
+.unit .tokenfig { width: calc(var(--u) * 2 * var(--fs)); height: calc(var(--u) * 2 * var(--fs)); }
+.stage .hit button { pointer-events: none; }
+.stage .hit { cursor: pointer; }

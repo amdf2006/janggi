@@ -133,10 +133,13 @@ export async function animateMove(view, el, from, to, { mode = 'full', sound = t
     await walk(el, a, b, 260, Math.max(from.row, to.row));
   } else {
     const k = mode === 'short' ? 0.6 : 1;
+    el.classList.add('active');
     face(el, to.col - from.col);
     setPose(el, 'move');
+    await wait(120);
     await walk(el, a, b, Math.min(1100, Math.max(380, dist * 230)) * k, Math.max(from.row, to.row));
     setPose(el, 'base'); face(el, 1);
+    el.classList.remove('active');
   }
   el.style.zIndex = 10 + to.row * 10;
   sfx('move', sound);
@@ -157,7 +160,9 @@ export async function animateCapture(view, el, victim, from, to, { mode = 'full'
   const dist = Math.hypot(to.col - from.col, to.row - from.row);
   const stand = ranged ? a : lerpPt(a, b, Math.max(0, 1 - 0.62 / dist));
 
-  // 1) 다가가기
+  // 1) 다가가기 — 싸우는 둘은 크게
+  el.classList.add('active'); victim.classList.add('active');
+  await wait(140);
   face(el, dir || 1);
   if (!ranged) {
     setPose(el, 'move');
@@ -196,5 +201,6 @@ export async function animateCapture(view, el, victim, from, to, { mode = 'full'
   await fade.finished.catch(() => {});
   victim.remove();
   setPose(el, 'base'); face(el, 1);
+  el.classList.remove('active');
   el.style.zIndex = 10 + to.row * 10;
 }

@@ -38,10 +38,33 @@ function buildPlayBoard() {
     const btn = document.createElement('button');
     place(btn, col, row); btn.style.zIndex = '';
     btn.dataset.col = col; btn.dataset.row = row;
-    btn.addEventListener('click', () => onSquare(crToSq(col, row, state.flipped)));
+    btn.addEventListener('click', (e) => { if (e.detail === 0) { e.stopPropagation(); onSquare(crToSq(col, row, state.flipped)); } });
     view.hit.appendChild(btn);
   }
   relabelHits();
+  // 클릭 판정: 갈 자리 → 캐릭터 그림(앞에 있는 것 우선) → 가장 가까운 교차점
+  view.root.addEventListener('click', (e) => {
+    const btn = e.target.closest && e.target.closest('.hit button');
+    if (btn && e.detail === 0) return; // 키보드 Enter는 버튼 자체 핸들러가 처리
+    e.stopPropagation();
+    const x = e.clientX, y = e.clientY;
+    const ptOf = (sq) => { const b = view.hit.querySelector(`button[aria-label="${sq}"]`); const r = b.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2, rad: r.width * 0.6 }; };
+    const g = state.game; if (!g) return;
+    if (state.selected) {
+      const dests = g.legal().map(parseMove).filter((m) => m.from === state.selected && !m.pass).map((m) => m.to);
+      for (const d of dests) { const p = ptOf(d); if (Math.hypot(x - p.x, y - p.y) < p.rad) return onSquare(d); }
+      for (const d of dests) { const u = unitEls[d]; if (u && inside(u, x, y)) return onSquare(d); }
+    }
+    const order = Object.entries(unitEls).sort((a, b) => (+b[1].style.zIndex || 0) - (+a[1].style.zIndex || 0));
+    for (const [sq, u] of order) if (inside(u, x, y)) return onSquare(sq);
+    let best = null, bd = 1e9;
+    view.hit.querySelectorAll('button').forEach((b) => { const r = b.getBoundingClientRect(); const d = Math.hypot(x - (r.x + r.width / 2), y - (r.y + r.height / 2)); if (d < bd) { bd = d; best = b; } });
+    if (best && bd < best.getBoundingClientRect().width) onSquare(best.getAttribute('aria-label'));
+  });
+}
+function inside(u, x, y) {
+  for (const part of u.querySelectorAll('.fig, .disc')) { const r = part.getBoundingClientRect(); if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return true; }
+  return false;
 }
 function relabelHits() {
   view.hit.querySelectorAll('button').forEach((b) => b.setAttribute('aria-label', crToSq(+b.dataset.col, +b.dataset.row, state.flipped)));
