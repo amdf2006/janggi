@@ -1,5 +1,5 @@
 import { initRules, Game, SETUPS, PIECES, parseMove, boardMap, makeFen, FILES } from './rules.js';
-import { Engine } from './engine.js';
+import { Engine, RemoteEngine } from './engine.js';
 import { LEVELS } from './levels.js';
 import { art, preload } from './characters.js';
 import { sfx } from './fx.js';
@@ -313,19 +313,22 @@ async function boot() {
     finish({ winner: state.me === 'cho' ? 'han' : 'cho', reason: '기권' });
   };
 
-  if (!Engine.supported()) {
-    $('#startBtn').textContent = '이 환경에서는 엔진을 실행할 수 없습니다';
-    $('#engineNote').textContent = '서버에 교차 출처 격리 헤더(COOP/COEP)가 필요합니다. Vercel에 올리면 자동 적용됩니다.';
-    $('#engineNote').classList.add('err');
-    return;
-  }
+  const local = Engine.supported();
   try {
-    state.engine = new Engine(); await state.engine.init();
-    $('#startBtn').disabled = false; $('#startBtn').textContent = '대국 시작';
+    state.engine = local ? new Engine() : new RemoteEngine();
+    await state.engine.init();
   } catch (e) {
     console.error(e);
+    // 브라우저 엔진이 실패하면 서버 엔진으로 한 번 더 시도
+    if (local) { try { state.engine = new RemoteEngine(); await state.engine.init(); } catch (e2) { state.engine = null; } }
+    else state.engine = null;
+  }
+  if (state.engine) {
+    $('#startBtn').disabled = false; $('#startBtn').textContent = '대국 시작';
+    if (state.engine instanceof RemoteEngine) $('#engineNote').textContent = '이 기기에서는 서버 엔진으로 둡니다. 컴퓨터의 수가 1~2초 늦을 수 있습니다.';
+  } else {
     $('#startBtn').textContent = '엔진을 불러오지 못했습니다';
-    $('#engineNote').textContent = String(e.message || e); $('#engineNote').classList.add('err');
+    $('#engineNote').textContent = '인터넷 연결을 확인하고 새로고침해 주세요.'; $('#engineNote').classList.add('err');
   }
 }
 boot();

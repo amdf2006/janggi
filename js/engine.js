@@ -83,3 +83,22 @@ export class Engine {
     return cand[0].move;
   }
 }
+
+// 브라우저에서 엔진을 못 돌릴 때: 같은 엔진을 서버(/api/engine)에서 실행
+export class RemoteEngine extends Engine {
+  async init() {
+    // 서버 엔진 깨우기 (첫 호출은 1~2초 걸림)
+    await this.analyse('rnba1abnr/4k4/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/4K4/RNBA1ABNR w - - 0 1', [], 50, 1);
+  }
+  async newGame() {}
+  async analyse(fen, moves, nodes, multipv) {
+    for (let tries = 0; tries < 3; tries++) {
+      try {
+        const r = await fetch('/api/engine', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fen, moves, nodes, multipv }) });
+        if (r.ok) return await r.json();
+      } catch (e) { /* 재시도 */ }
+      await new Promise((ok) => setTimeout(ok, 600));
+    }
+    throw new Error('서버 엔진에 연결하지 못했습니다.');
+  }
+}
