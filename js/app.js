@@ -2,7 +2,7 @@ import { initRules, Game, SETUPS, PIECES, parseMove, boardMap, makeFen, FILES } 
 import { Engine, RemoteEngine } from './engine.js';
 import { LEVELS } from './levels.js';
 import { art, preload } from './characters.js';
-import { sfx } from './fx.js';
+import { sfx, initAudio, setAmbient } from './fx.js';
 import { buildBoard, makeUnit, place, animateMove as walkMove, animateCapture } from './board3d.js';
 
 const $ = (s) => document.querySelector(s);
@@ -11,7 +11,7 @@ const store = {
   load() { try { return JSON.parse(localStorage.getItem(this.key)) || {}; } catch { return {}; } },
   save(d) { try { localStorage.setItem(this.key, JSON.stringify(d)); } catch {} },
 };
-let prefs = Object.assign({ level: 8, side: 'cho', setup: 'NBBN', sound: true, battle: 'full', record: {} }, store.load());
+let prefs = Object.assign({ level: 8, side: 'cho', setup: 'NBBN', sound: true, ambient: true, battle: 'full', record: {} }, store.load());
 
 const state = {
   game: null, engine: null, me: 'cho', level: null, selected: null,
@@ -19,7 +19,7 @@ const state = {
 };
 
 /* ── 소리 ── */
-function clack(heavy = false) { sfx(heavy ? 'thud' : 'move', prefs.sound); }
+function clack(heavy = false) { sfx(heavy ? 'thud' : 'tick', prefs.sound); }
 
 /* ── 판 (원근) ──────────────────────────────── */
 function sqToCR(sq, flipped) {
@@ -177,8 +177,8 @@ async function doMove(uci) {
   }
   g.push(uci);
   if (mv.pass) { clack(); callout('한수쉼', g.moves[g.moves.length - 1].mover); }
-  else if (g.isCheck()) callout('장군', g.moves[g.moves.length - 1].mover);
-  else if (wasCheck) callout('멍군', g.moves[g.moves.length - 1].mover);
+  else if (g.isCheck()) { const side = g.moves[g.moves.length - 1].mover; callout('장군', side); sfx('jang', prefs.sound, { side }); }
+  else if (wasCheck) { const side = g.moves[g.moves.length - 1].mover; callout('멍군', side); sfx('meong', prefs.sound, { side }); }
   refresh();
   const out = g.outcome();
   if (out) return setTimeout(() => finish(out), 700);
@@ -218,9 +218,9 @@ function finish(out) {
   const lv = state.level.name;
   const rec = prefs.record[lv] || { w: 0, l: 0, d: 0 };
   let title;
-  if (!out.winner) { title = '무승부'; rec.d++; }
-  else if (out.winner === state.me) { title = '승리'; rec.w++; }
-  else { title = '패배'; rec.l++; }
+  if (!out.winner) { title = '무승부'; rec.d++; sfx('lose', prefs.sound); }
+  else if (out.winner === state.me) { title = '승리'; rec.w++; sfx('win', prefs.sound); }
+  else { title = '패배'; rec.l++; sfx('lose', prefs.sound); }
   prefs.record[lv] = rec; store.save(prefs);
   $('#resTitle').textContent = title;
   $('#resReason').textContent = `${out.reason} · 상대 ${lv}` + (state.undoUsed && out.winner === state.me ? ' (무르기 사용)' : '');
@@ -245,6 +245,7 @@ async function startGame() {
   const cpuName = SETUPS.find((s) => s.id === state.cpuSetup).name;
   $('#matchTitle').textContent = `나 (${SETUPS.find((s) => s.id === mine).name}) 대 컴퓨터 ${state.level.name} (${cpuName})`;
   relabelHits(); renderAll(); refresh();
+  sfx('drum', prefs.sound); setAmbient(prefs.sound && prefs.ambient);
   if (state.game.turn() !== state.me) setTimeout(cpuMove, 600);
 }
 
@@ -253,6 +254,7 @@ function toLobby() {
   if (state.game) { state.game.destroy(); state.game = null; }
   state.busy = false;
   $('#play').hidden = true; $('#lobby').hidden = false;
+  setAmbient(false);
   updateLevelUI();
 }
 
@@ -285,7 +287,11 @@ async function boot() {
   updateLevelUI();
   $('#soundBtn').textContent = prefs.sound ? '소리 켬' : '소리 끔';
   $('#soundBtn').setAttribute('aria-pressed', prefs.sound);
-  $('#soundBtn').onclick = () => { prefs.sound = !prefs.sound; store.save(prefs); $('#soundBtn').textContent = prefs.sound ? '소리 켬' : '소리 끔'; $('#soundBtn').setAttribute('aria-pressed', prefs.sound); };
+  $('#soundBtn').onclick = () => { prefs.sound = !prefs.sound; store.save(prefs); $('#soundBtn').textContent = prefs.sound ? '소리 켬' : '소리 끔'; $('#soundBtn').setAttribute('aria-pressed', prefs.sound); setAmbient(prefs.sound && prefs.ambient && !$('#play').hidden); };
+  const setAmbBtn = () => { $('#ambBtn').textContent = prefs.ambient ? '배경음 켬' : '배경음 끔'; $('#ambBtn').setAttribute('aria-pressed', prefs.ambient); };
+  setAmbBtn();
+  $('#ambBtn').onclick = () => { prefs.ambient = !prefs.ambient; store.save(prefs); setAmbBtn(); setAmbient(prefs.sound && prefs.ambient && !$('#play').hidden); };
+  initAudio();
 
   const BM = { full: '전투 연출: 전체', short: '전투 연출: 짧게', off: '전투 연출: 끔' };
   const setBM = () => { $('#battleBtn').textContent = BM[prefs.battle]; };

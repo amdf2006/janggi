@@ -163,6 +163,7 @@ export async function animateMove(view, el, from, to, { mode = 'full', sound = t
   const a = pt(from.col, from.row), b = pt(to.col, to.row);
   const dist = Math.hypot(to.col - from.col, to.row - from.row);
   if (mode === 'off' || reduce()) {
+    sfx('tick', sound);
     await walk(el, a, b, 260, Math.max(from.row, to.row));
   } else {
     const k = mode === 'short' ? 0.6 : 1;
@@ -170,12 +171,13 @@ export async function animateMove(view, el, from, to, { mode = 'full', sound = t
     face(el, to.col - from.col);
     setPose(el, 'move');
     await wait(120);
-    await walk(el, a, b, Math.min(1100, Math.max(380, dist * 230)) * k, Math.max(from.row, to.row));
+    const wms = Math.min(1100, Math.max(380, dist * 230)) * k;
+    sfx('step', sound, el._p, wms / 1000);
+    await walk(el, a, b, wms, Math.max(from.row, to.row));
     setPose(el, 'base'); face(el, 1);
     el.classList.remove('active');
   }
   el.style.zIndex = 10 + to.row * 10;
-  sfx('move', sound);
 }
 
 // 잡기: 다가가서 공격 → 상대 피격·쓰러짐 → 그 자리로 들어감
@@ -199,9 +201,10 @@ export async function animateCapture(view, el, victim, from, to, { mode = 'full'
   face(el, dir || 1);
   if (!ranged) {
     setPose(el, 'move');
-    sfx('move', sound);
     const charge = el._p.type === 'r' ? 0.55 : 1; // 전차는 돌진
-    await walk(el, a, stand, Math.min(1000, Math.max(320, dist * 210)) * k * charge, Math.max(from.row, to.row));
+    const wms = Math.min(1000, Math.max(320, dist * 210)) * k * charge;
+    sfx('step', sound, el._p, wms / 1000);
+    await walk(el, a, stand, wms, Math.max(from.row, to.row));
   }
   // 상대는 공격자를 바라봄
   face(victim, -(dir || 1));
@@ -217,8 +220,9 @@ export async function animateCapture(view, el, victim, from, to, { mode = 'full'
     explode(view.fx, b, ms(560));
     shake(view.root, ms(380));
   } else {
+    sfx('attack', sound, el._p);
     await wait(ms(150));
-    sfx('clash', sound);
+    sfx('hit', sound);
     slash(view.fx, b, ms(380));
     shake(view.root, ms(260));
   }
