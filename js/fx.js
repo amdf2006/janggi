@@ -32,6 +32,8 @@ export function sfx(kind, enabled = true) {
     if (kind === 'whoosh') noise(0.25, 900, 0.8, 0.5, 1.5);
     if (kind === 'clash') { noise(0.12, 2600, 3, 0.9, 4); ring(1250, 0.5, 0.18); ring(1870, 0.35, 0.1); }
     if (kind === 'fall') noise(0.35, 220, 1.2, 1.0, 2);
+    if (kind === 'cannon') { noise(0.45, 160, 0.7, 1.4, 2.2); noise(0.12, 900, 1, 0.6, 5); }
+    if (kind === 'boom') { noise(0.7, 90, 0.6, 1.6, 1.6); noise(0.2, 600, 0.8, 0.7, 4); }
   } catch {}
 }
 

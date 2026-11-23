@@ -125,6 +125,39 @@ function bolt(fxLayer, a, b, ms) {
   return s.animate([{ left: A.x + '%', top: A.y + '%', transform: `translate(-50%,-50%) rotate(${ang}deg)` }, { left: B.x + '%', top: B.y + '%', transform: `translate(-50%,-50%) rotate(${ang}deg)` }], { duration: ms, easing: 'ease-in' }).finished.then(() => s.remove());
 }
 
+// 포탄: 포물선으로 날아가 폭발
+function cannonball(fxLayer, a, b, ms) {
+  const lift = (p) => ({ x: p.x, y: p.y - 0.75 * p.u * ASPECT });
+  const A = lift(a), B = { x: b.x, y: b.y - 0.55 * b.u * ASPECT };
+  const peak = Math.max(6, Math.hypot(B.x - A.x, (B.y - A.y) / ASPECT) * 0.35);
+  // 포구 섬광
+  const fl = document.createElement('div'); fl.className = 'fx-muzzle'; fl.style.left = A.x + '%'; fl.style.top = A.y + '%'; fl.style.setProperty('--u', a.u + 'cqw');
+  fxLayer.appendChild(fl);
+  fl.animate([{ opacity: 1, transform: 'translate(-50%,-50%) scale(.4)' }, { opacity: 0, transform: 'translate(-50%,-50%) scale(1.6)' }], { duration: 320, easing: 'ease-out' }).finished.then(() => fl.remove());
+  const ball = document.createElement('div'); ball.className = 'fx-ball'; ball.style.setProperty('--u', ((a.u + b.u) / 2) + 'cqw');
+  fxLayer.appendChild(ball);
+  const frames = [];
+  for (let i = 0; i <= 12; i++) {
+    const t = i / 12;
+    frames.push({ left: (A.x + (B.x - A.x) * t) + '%', top: (A.y + (B.y - A.y) * t - peak * 4 * t * (1 - t)) + '%' });
+  }
+  return ball.animate(frames, { duration: ms, easing: 'linear' }).finished.then(() => ball.remove());
+}
+function explode(fxLayer, at, ms) {
+  const c = { x: at.x, y: at.y - 0.55 * at.u * ASPECT };
+  const boom = document.createElement('div'); boom.className = 'fx-boom';
+  boom.style.left = c.x + '%'; boom.style.top = c.y + '%'; boom.style.setProperty('--u', at.u + 'cqw');
+  fxLayer.appendChild(boom);
+  boom.animate([{ opacity: 1, transform: 'translate(-50%,-50%) scale(.2)' }, { opacity: .95, offset: .25, transform: 'translate(-50%,-50%) scale(1)' }, { opacity: 0, transform: 'translate(-50%,-50%) scale(1.5)' }], { duration: ms, easing: 'ease-out' }).finished.then(() => boom.remove());
+  for (let i = 0; i < 5; i++) {
+    const sm = document.createElement('div'); sm.className = 'fx-smoke';
+    sm.style.left = c.x + '%'; sm.style.top = c.y + '%'; sm.style.setProperty('--u', at.u + 'cqw');
+    fxLayer.appendChild(sm);
+    const dx = (Math.random() - 0.5) * 140, dy = -40 - Math.random() * 80;
+    sm.animate([{ opacity: .8, transform: 'translate(-50%,-50%) scale(.4)' }, { opacity: 0, transform: `translate(calc(-50% + ${dx}%), calc(-50% + ${dy}%)) scale(1.6)` }], { duration: ms * 2.2, easing: 'ease-out', delay: i * 40 }).finished.then(() => sm.remove());
+  }
+}
+
 // 이동 (잡기 없음)
 export async function animateMove(view, el, from, to, { mode = 'full', sound = true } = {}) {
   const a = pt(from.col, from.row), b = pt(to.col, to.row);
@@ -167,7 +200,8 @@ export async function animateCapture(view, el, victim, from, to, { mode = 'full'
   if (!ranged) {
     setPose(el, 'move');
     sfx('move', sound);
-    await walk(el, a, stand, Math.min(1000, Math.max(320, dist * 210)) * k, Math.max(from.row, to.row));
+    const charge = el._p.type === 'r' ? 0.55 : 1; // 전차는 돌진
+    await walk(el, a, stand, Math.min(1000, Math.max(320, dist * 210)) * k * charge, Math.max(from.row, to.row));
   }
   // 상대는 공격자를 바라봄
   face(victim, -(dir || 1));
@@ -176,11 +210,18 @@ export async function animateCapture(view, el, victim, from, to, { mode = 'full'
   setPose(el, 'attack');
   const fig = el.querySelector('.fig');
   fig.animate([{ translate: '0 0' }, { translate: `${(dir || 1) * 14}% -4%` }, { translate: '0 0' }], { duration: ms(360), easing: 'cubic-bezier(.3,1.4,.4,1)' });
-  if (ranged) { sfx('whoosh', sound); await bolt(view.fx, a, b, ms(260)); }
-  else await wait(ms(150));
-  sfx('clash', sound);
-  slash(view.fx, b, ms(380));
-  shake(view.root, ms(260));
+  if (ranged) {
+    sfx('cannon', sound);
+    await cannonball(view.fx, a, b, ms(520));
+    sfx('boom', sound);
+    explode(view.fx, b, ms(560));
+    shake(view.root, ms(380));
+  } else {
+    await wait(ms(150));
+    sfx('clash', sound);
+    slash(view.fx, b, ms(380));
+    shake(view.root, ms(260));
+  }
 
   // 3) 피격 — 맞는 방향 반대로 밀려남 (피격 그림은 왼쪽에서 맞는 기준)
   const vf = victim.querySelector('.fig');
