@@ -63,7 +63,7 @@
   <header class="bar">
     <button class="ghost" id="backBtn" aria-label="처음 화면으로">← 나가기</button>
     <div class="bar-title" id="matchTitle"></div>
-    <div class="bar-right"><button class="ghost" id="viewBtn">시점: 원근</button><button class="ghost" id="battleBtn">전투 연출: 전체</button><button class="ghost" id="ambBtn" aria-pressed="true">배경음 켬</button><button class="ghost" id="soundBtn" aria-pressed="true" aria-label="소리 켜고 끄기">소리 켬</button></div>
+    <div class="bar-right"></div>
   </header>
 
   <div class="table">
@@ -75,6 +75,12 @@
     <aside class="player bottom" id="pBottom"></aside>
 
     <section class="side-panel">
+      <div class="settings" aria-label="화면·소리 설정">
+        <button id="viewBtn">시점: 원근</button>
+        <button id="battleBtn">전투 연출: 전체</button>
+        <button id="soundBtn" aria-pressed="true">소리 켬</button>
+        <button id="ambBtn" aria-pressed="true">배경음 켬</button>
+      </div>
       <div class="actions">
         <button id="passBtn">한수쉼</button>
         <button id="undoBtn">무르기</button>

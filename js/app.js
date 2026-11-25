@@ -299,6 +299,7 @@ async function boot() {
   const setBM = () => { $('#battleBtn').textContent = BM[prefs.battle]; };
   setBM();
   $('#battleBtn').onclick = () => { prefs.battle = { full: 'short', short: 'off', off: 'full' }[prefs.battle]; store.save(prefs); setBM(); };
+  prefs.view = 'persp'; // 들어올 때는 항상 원근 시점
   setView(prefs.view);
   const setViewBtn = () => { $('#viewBtn').textContent = '시점: ' + VIEWS[prefs.view].label; };
   setViewBtn();
