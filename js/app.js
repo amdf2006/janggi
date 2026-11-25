@@ -11,7 +11,7 @@ const store = {
   load() { try { return JSON.parse(localStorage.getItem(this.key)) || {}; } catch { return {}; } },
   save(d) { try { localStorage.setItem(this.key, JSON.stringify(d)); } catch {} },
 };
-let prefs = Object.assign({ level: 8, side: 'cho', setup: 'NBBN', sound: true, ambient: true, battle: 'full', view: 'persp', record: {} }, store.load());
+let prefs = Object.assign({ level: 8, side: 'cho', setup: 'NBBN', sound: true, ambient: true, battle: 'full', view: 'high', record: {} }, store.load());
 
 const state = {
   game: null, engine: null, me: 'cho', level: null, selected: null,
@@ -299,7 +299,7 @@ async function boot() {
   const setBM = () => { $('#battleBtn').textContent = BM[prefs.battle]; };
   setBM();
   $('#battleBtn').onclick = () => { prefs.battle = { full: 'short', short: 'off', off: 'full' }[prefs.battle]; store.save(prefs); setBM(); };
-  prefs.view = 'persp'; // 들어올 때는 항상 원근 시점
+  prefs.view = 'high'; // 들어올 때는 항상 '높게' 시점
   setView(prefs.view);
   const setViewBtn = () => { $('#viewBtn').textContent = '시점: ' + VIEWS[prefs.view].label; };
   setViewBtn();
