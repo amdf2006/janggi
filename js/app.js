@@ -3,7 +3,7 @@ import { Engine, RemoteEngine } from './engine.js';
 import { LEVELS } from './levels.js';
 import { art, preload } from './characters.js';
 import { sfx, initAudio, setAmbient } from './fx.js';
-import { buildBoard, makeUnit, place, animateMove as walkMove, animateCapture } from './board3d.js';
+import { buildBoard, makeUnit, place, animateMove as walkMove, animateCapture, setView, VIEWS } from './board3d.js';
 
 const $ = (s) => document.querySelector(s);
 const store = {
@@ -11,7 +11,7 @@ const store = {
   load() { try { return JSON.parse(localStorage.getItem(this.key)) || {}; } catch { return {}; } },
   save(d) { try { localStorage.setItem(this.key, JSON.stringify(d)); } catch {} },
 };
-let prefs = Object.assign({ level: 8, side: 'cho', setup: 'NBBN', sound: true, ambient: true, battle: 'full', record: {} }, store.load());
+let prefs = Object.assign({ level: 8, side: 'cho', setup: 'NBBN', sound: true, ambient: true, battle: 'full', view: 'persp', record: {} }, store.load());
 
 const state = {
   game: null, engine: null, me: 'cho', level: null, selected: null,
@@ -42,6 +42,8 @@ function buildPlayBoard() {
     view.hit.appendChild(btn);
   }
   relabelHits();
+  if (view.root._clickBound) return;
+  view.root._clickBound = true;
   // 클릭 판정: 갈 자리 → 캐릭터 그림(앞에 있는 것 우선) → 가장 가까운 교차점
   view.root.addEventListener('click', (e) => {
     const btn = e.target.closest && e.target.closest('.hit button');
@@ -297,6 +299,17 @@ async function boot() {
   const setBM = () => { $('#battleBtn').textContent = BM[prefs.battle]; };
   setBM();
   $('#battleBtn').onclick = () => { prefs.battle = { full: 'short', short: 'off', off: 'full' }[prefs.battle]; store.save(prefs); setBM(); };
+  setView(prefs.view);
+  const setViewBtn = () => { $('#viewBtn').textContent = '시점: ' + VIEWS[prefs.view].label; };
+  setViewBtn();
+  $('#viewBtn').onclick = () => {
+    if (state.anim) return;
+    const order = ['persp', 'high', 'top'];
+    prefs.view = order[(order.indexOf(prefs.view) + 1) % 3]; store.save(prefs);
+    setView(prefs.view); setViewBtn();
+    buildPlayBoard(); if (state.game) renderAll();
+    drawHero();
+  };
   preload();
   await initRules();
   buildSetupPicker(); drawHero(); buildPlayBoard();

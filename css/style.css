@@ -167,7 +167,7 @@ input[type=range] { width: 100%; accent-color: var(--gold); }
 
 .table {
   flex: 1; display: grid; gap: 12px 28px; padding: 16px;
-  grid-template-columns: minmax(0, min(720px, calc((100vh - 230px) * 1.25))) 300px;
+  grid-template-columns: minmax(0, min(720px, calc((100vh - 230px) * var(--asp, 1.2)))) 300px;
   grid-template-areas: "top side" "board side" "bottom side";
   justify-content: center; align-content: start;
 }
@@ -382,3 +382,23 @@ dialog.pv { width: min(94vw, 560px); }
   background: radial-gradient(circle, #fffbe6 0%, #ffd06a 25%, #ff7a1f 45%, rgba(150,40,10,.6) 62%, rgba(60,30,20,0) 72%); mix-blend-mode: screen; }
 .fx-smoke { position: absolute; width: calc(var(--u) * 1.1); height: calc(var(--u) * 1.1); border-radius: 50%;
   background: radial-gradient(circle, rgba(90,85,80,.75), rgba(60,55,50,0) 70%); }
+
+/* ── 시점별 (--sq: 판이 눕은 정도) ── */
+.stage { --sq: .62; }
+.unit .disc { height: calc(var(--u) * .86 * var(--sq)); }
+.unit .disc b { transform: scaleY(min(1, calc(var(--sq) * 1.2))); }
+.unit .disc .por { display: none; }
+.stage .mk.dot { height: calc(var(--u) * .3 * var(--sq)); }
+.stage .mk.dot.cap, .stage .mk.sel { height: calc(var(--u) * 1.05 * var(--sq)); }
+.stage .mk.last { height: calc(var(--u) * .95 * var(--sq)); }
+.stage .hit button { height: calc(var(--u) * (.2 + .9 * var(--sq))); }
+/* 위에서 보기: 평소엔 얼굴 받침만, 움직이거나 싸울 때만 일어섬 */
+.stage.flat .unit .disc { width: calc(var(--u) * .92); height: calc(var(--u) * .92); }
+.stage.flat .unit .disc .por { display: block; position: absolute; inset: 7%; width: 86%; height: 86%; border-radius: 50%; object-fit: cover; }
+.stage.flat .unit .disc b { position: absolute; right: -10%; bottom: -10%; width: calc(var(--u) * .36); height: calc(var(--u) * .36); border-radius: 50%;
+  display: grid; place-items: center; font-size: calc(var(--u) * .22); color: #fff; transform: none; }
+.stage.flat .unit.cho .disc b { background: var(--cho); } .stage.flat .unit.han .disc b { background: var(--han); }
+.stage.flat .unit:not(.active) .fig { opacity: 0 !important; visibility: hidden; }
+.stage.flat .unit.active .fig { bottom: calc(var(--u) * .1); }
+.bar-right { flex-wrap: wrap; justify-content: flex-end; }
+@media (max-width: 900px) { .bar { gap: 6px; } .bar-title { display: none; } .bar-right .ghost { padding: 5px 7px; font-size: 12px; } }

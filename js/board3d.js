@@ -5,22 +5,36 @@ import { sfx } from './fx.js';
 
 // ── 투영 ─────────────────────────────────────
 const M = 0.62;               // 판 여백 (칸 단위)
-const TILT = 40 * Math.PI / 180;
 const CAM = 17;               // 카메라 거리 (칸 단위)
 const FIG = 2.05;             // 캐릭터 키 (칸 단위)
 const DEPTH = 9 + 2 * M;
+
+// 시점: persp(원근) · high(높게) · top(위에서)
+export const VIEWS = { persp: { tilt: 40, sq: 0.62, label: '원근' }, high: { tilt: 22, sq: 0.8, label: '높게' }, top: { tilt: 0, sq: 1, label: '위에서' } };
+let TILT, SQ, VIEW = 'persp', EDGE;
+let minX, maxX, minY, maxY;
+export let W, H, ASPECT;
 
 function raw(X, T) {          // X: 가로(중앙 0), T: 앞 가장자리에서의 거리
   const y3 = T * Math.cos(TILT), z3 = T * Math.sin(TILT);
   const k = CAM / (CAM + z3);
   return { x: X * k, y: -y3 * k, k };
 }
-const near = raw(-(4 + M), 0), farTop = raw(0, DEPTH), row0 = raw(0, 9 + M);
-const minX = near.x, maxX = -near.x;
-const minY = Math.min(farTop.y, row0.y - FIG * row0.k) - 0.15;
-const maxY = 0.55;            // 앞쪽 판 두께 + 여유
-export const W = maxX - minX, H = maxY - minY;
-export const ASPECT = W / H;
+export function setView(v) {
+  VIEW = VIEWS[v] ? v : 'persp';
+  TILT = VIEWS[VIEW].tilt * Math.PI / 180; SQ = VIEWS[VIEW].sq;
+  EDGE = VIEW === 'top' ? 0.12 : VIEW === 'high' ? 0.28 : 0.42;
+  const near = raw(-(4 + M), 0), farTop = raw(0, DEPTH), row0 = raw(0, 9 + M);
+  minX = near.x; maxX = -near.x;
+  // 평소 캐릭터는 반 크기 → 그만큼만 머리 위 여유 (커질 때는 판 밖으로 살짝 넘어가도 됨)
+  minY = VIEW === 'top' ? farTop.y - 0.15 : Math.min(farTop.y, row0.y - FIG * 0.6 * row0.k) - 0.15;
+  maxY = EDGE + 0.13;
+  W = maxX - minX; H = maxY - minY; ASPECT = W / H;
+  document.documentElement.style.setProperty('--asp', ASPECT.toFixed(3));
+  return VIEW;
+}
+export const currentView = () => VIEW;
+setView('persp');
 
 // 표시 좌표(col 0~8, row 0~9, row 0 = 먼 쪽) → 화면 %
 export function pt(col, row) {
@@ -41,7 +55,9 @@ export function buildBoard(container) {
   const id = 'b' + (++uid);
   container.innerHTML = '';
   container.classList.add('stage');
+  container.classList.toggle('flat', VIEW === 'top');
   container.style.aspectRatio = ASPECT;
+  container.style.setProperty('--sq', SQ);
   const P = (X, T) => { const p = raw(X, T); return `${p.x},${p.y}`; };
   const e = 4 + M;
   let lines = '';
@@ -59,7 +75,7 @@ export function buildBoard(container) {
       <linearGradient id="${id}e" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8a5f2c"/><stop offset="1" stop-color="#5a3b18"/></linearGradient>
       <pattern id="${id}g" width=".9" height=".18" patternUnits="userSpaceOnUse"><path d="M0 .09 Q.45 .03 .9 .09" stroke="rgba(110,70,25,.12)" stroke-width=".02" fill="none"/></pattern>
     </defs>
-    <polygon points="${nl.x},${nl.y} ${nr.x},${nr.y} ${nr.x},${nr.y + 0.42} ${nl.x},${nl.y + 0.42}" fill="url(#${id}e)"/>
+    <polygon points="${nl.x},${nl.y} ${nr.x},${nr.y} ${nr.x},${nr.y + EDGE} ${nl.x},${nl.y + EDGE}" fill="url(#${id}e)"/>
     <polygon points="${P(-e, 0)} ${P(e, 0)} ${P(e, DEPTH)} ${P(-e, DEPTH)}" fill="url(#${id}w)"/>
     <polygon points="${P(-e, 0)} ${P(e, 0)} ${P(e, DEPTH)} ${P(-e, DEPTH)}" fill="url(#${id}g)"/>
     <polygon points="${P(-e, 0)} ${P(e, 0)} ${P(e, DEPTH)} ${P(-e, DEPTH)}" fill="none" stroke="#7a5224" stroke-width=".06"/>
@@ -79,7 +95,7 @@ export function makeUnit(p) {
   const a = art(p.side, p.type);
   const el = document.createElement('div');
   el.className = `unit ${p.side} sz-${info.size}`;
-  el.innerHTML = `<div class="disc"><b>${info[p.side]}</b></div>` +
+  el.innerHTML = `<div class="disc">${a ? `<img class="por" src="${a.portrait}" alt="">` : ''}<b>${info[p.side]}</b></div>` +
     (a ? `<img class="fig" src="${a.base}" alt="${a.name}" draggable="false">` : `<div class="fig tokenfig"><span>${info[p.side]}</span></div>`);
   el._art = a; el._p = p;
   return el;
